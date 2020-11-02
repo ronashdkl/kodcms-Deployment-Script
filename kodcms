@@ -8,6 +8,9 @@ outputPath=$(pwd)"/exported/"
 mkdir -p $outputPath;
 chmod 0777 -vR $outputPath;
 
+display_size(){
+du -h --max-depth=1 --exclude=./.git
+}
 
 export_db(){
 printf "\n ${GREEN} Step one \t Dump mysql database\n"
@@ -23,14 +26,15 @@ echo
 	mysqldump -u $mysqlUser -p $mysqlDb > ${outputPath}/db.sql  --no-tablespaces;
 echo "Db Exported"
 echo
-du -h
+display_size
 echo
 
 }
 
 
 zip_sourcecode(){
-
+echo "Admin right needed"
+echo
 printf "\n${GREEN} Step Two \t Zip source code.\n\n"
 
 webdir="/var/www/${cmsDomain}/web"
@@ -42,12 +46,16 @@ if [ -d $webdir ]
 cd $webdir;
 echo "${webdir} access granted!"
 echo
-ls
+sudo ls 2>&1;
 echo
 #zip website
-#zip -r ${outputPath}kodcms.zip ./* -x "./error";
-
+if ! zip -r ${outputPath}kodcms.zip * -x "./error" "cms/vendor/*" 2>&1; then
+printf "\n Unable to zip source code.  \n check if source code available \n or  try again. "
+else
+chmod 0777 ${outputPath}kodcms.zip;
 printf "\n${NC} Source code Exported \n\n ${GREEN}"
+fi
+
 
 cd $outputPath;
 ls
@@ -55,7 +63,7 @@ echo
 echo $(pwd)
 echo
 echo "Total sized"
-du -h  $outputPath;
+display_size
 echo
 
 exit 0;
@@ -81,7 +89,8 @@ installScriptFile=""
 
 read -p "Enter remote server address: " target_host
 read -p "Enter remote server username: " userName;
-read -sp "Enter ${userName}@${target_host} password: " password
+#read -sp "Enter ${userName}@${target_host} password: " password
+read -p "Enter server web root path: " webroot
 
 #copy files to server
 
@@ -90,7 +99,7 @@ printf "\n${GREEN}Copying Source code and database to server"
 echo
 chmod 0777 $dbConfigFile;
 # sshpass -p $password
- if  ! scp  -o StrictHostKeyChecking=no  {$sourceCode,$databaseSql,$dbConfigFile} $userName@$target_host:../../web/ 2>&1;then
+ if  ! scp  -o StrictHostKeyChecking=no  {$sourceCode,$databaseSql,$dbConfigFile} $userName@$target_host:$webroot 2>&1;then
 echo "Cannot copy files. Please try again"
 exit 1
 else
@@ -133,30 +142,46 @@ echo
 
 #access to server
 server_access(){
-    echo "Unzipping files"
+    echo "Script to run on server"
     echo
-#read -sp "Enter ${username}@${target_host} password: " password
 #initDbScript=$(pwd)/database.sh
-sshpass -p $password ssh  $userName@$target_host << EOF
- date
- hostname
- cd ../../web/;
-unzip ./kodcms.zip;
-#rm ./kodcms.zip;
-if unzip ./kodcms.zip 2>&1;
-then
-chmod 0777 -vR ./website/runtime
-chmod 0777 -vR ./website/web
-chmod 0777 -vR ./website/storage
-chmod 0777 -vR ./plugins/*/*.json
-mv ./db.php website/config/db.php
-printf "\n\n\nAutomated script ended successfully! Than you\n"
-else
+#sshpass -p $password 
+ssh  $userName@$target_host "cd ${webroot}; bash" << EOF
+ #cd ../../web/;
 
-echo "Error on unziping. Please try again."
+[ -d ./cms ] && rm -rf ./cms 2>&1
+[ -d ./plugins ] && rm -rf ./plugins 2>&1
+[ -d ./website ] && rm -rf ./website 2>&1
+
+if unzip -o ./kodcms.zip 2>&1;
+then
+rm ./kodcms.zip
+echo "Zip removed"
 echo
 
-exit 1;
+chmod 0777 -vR ./website/runtime
+echo "Website runtime permission changed"
+echo
+chmod 0777 -vR ./website/web
+echo "Website web permission changed"
+echo
+chmod 0777 -vR ./website/storage
+echo "Website storage permission changed"
+echo
+chmod 0777 -vR ./plugins/*/*.json
+echo "plugins permission changed"
+echo
+mv ./db.php website/config/db.php 2>&1
+echo "db.php moved top website"
+echo
+ 
+printf "\n\n\nAutomated script ended successfully! Than you\n"
+exit 0
+else
+echo "Error on unziping. Please try again."
+exit 1
+echo
+
 fi
 EOF
 
@@ -227,7 +252,7 @@ do
     esac
 done
 
-exit 0
+#exit 0
 
 
 
