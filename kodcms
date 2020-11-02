@@ -49,7 +49,7 @@ echo
 sudo ls 2>&1;
 echo
 #zip website
-if ! zip -r ${outputPath}kodcms.zip * -x "./error" "cms/vendor/*" 2>&1; then
+if ! sudo zip -r ${outputPath}kodcms.zip * -x "./error" "cms/vendor/*" 2>&1; then
 printf "\n Unable to zip source code.  \n check if source code available \n or  try again. "
 else
 chmod 0777 ${outputPath}kodcms.zip;
