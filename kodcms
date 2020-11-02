@@ -1,0 +1,243 @@
+#!/bin/bash
+# kodcms migration scripts
+
+GREEN='\033[0;32m'
+NC='\033[0m' #no color
+
+outputPath=$(pwd)"/exported/"
+mkdir -p $outputPath;
+chmod 0777 -vR $outputPath;
+
+
+export_db(){
+printf "\n ${GREEN} Step one \t Dump mysql database\n"
+
+#read username
+read -p  'Mysql Username:' mysqlUser
+
+
+#read database name
+read -p 'Mysql database name: ' mysqlDb
+echo
+# export database
+	mysqldump -u $mysqlUser -p $mysqlDb > ${outputPath}/db.sql  --no-tablespaces;
+echo "Db Exported"
+echo
+du -h
+echo
+
+}
+
+
+zip_sourcecode(){
+
+printf "\n${GREEN} Step Two \t Zip source code.\n\n"
+
+webdir="/var/www/${cmsDomain}/web"
+
+if [ -d $webdir ]
+
+ then
+
+cd $webdir;
+echo "${webdir} access granted!"
+echo
+ls
+echo
+#zip website
+#zip -r ${outputPath}kodcms.zip ./* -x "./error";
+
+printf "\n${NC} Source code Exported \n\n ${GREEN}"
+
+cd $outputPath;
+ls
+echo
+echo $(pwd)
+echo
+echo "Total sized"
+du -h  $outputPath;
+echo
+
+exit 0;
+else
+printf "\n Website not found\n"
+exit 0;
+fi;
+
+
+}
+
+server_script(){
+
+#files to be uploads
+scriptPath=$(pwd)/exported
+sourceCode=$scriptPath/kodcms.zip
+databaseSql=$scriptPath/db.sql
+##script file which will run on server onece
+
+dbConfigFile=$scriptPath/db.php
+installScriptFile=""
+
+
+read -p "Enter remote server address: " target_host
+read -p "Enter remote server username: " userName;
+read -sp "Enter ${userName}@${target_host} password: " password
+
+#copy files to server
+
+copy_files(){
+printf "\n${GREEN}Copying Source code and database to server"
+echo
+chmod 0777 $dbConfigFile;
+# sshpass -p $password
+ if  ! scp  -o StrictHostKeyChecking=no  {$sourceCode,$databaseSql,$dbConfigFile} $userName@$target_host:../../web/ 2>&1;then
+echo "Cannot copy files. Please try again"
+exit 1
+else
+echo "Sourcecode copied"
+fi
+echo
+echo 
+
+
+
+}
+
+create_db_config(){
+touch $dbConfigFile;
+FILE=$dbConfigFile;
+read -p 'Database UserName: ' dbUser;
+read -p "Database Password for ${dbUser}: " dbpwd;
+read -p 'Database Name: ' dbName
+/bin/cat <<EOM >$FILE
+<?php
+
+return [
+    'class' => 'yii\db\Connection',
+    'dsn' => 'mysql:host=localhost;dbname=$dbName',
+    'username' => '$dbUser',
+    'password' => '$dbpwd',
+    'charset' => 'utf8',
+    'enableSchemaCache' => true,
+    'schemaCacheDuration' => 60,
+    'schemaCache' => 'cache',
+];
+
+EOM
+
+echo
+echo "kodcms Database configuration for production file created "
+echo
+}
+
+
+#access to server
+server_access(){
+    echo "Unzipping files"
+    echo
+#read -sp "Enter ${username}@${target_host} password: " password
+#initDbScript=$(pwd)/database.sh
+sshpass -p $password ssh  $userName@$target_host << EOF
+ date
+ hostname
+ cd ../../web/;
+unzip ./kodcms.zip;
+#rm ./kodcms.zip;
+if unzip ./kodcms.zip 2>&1;
+then
+chmod 0777 -vR ./website/runtime
+chmod 0777 -vR ./website/web
+chmod 0777 -vR ./website/storage
+chmod 0777 -vR ./plugins/*/*.json
+mv ./db.php website/config/db.php
+printf "\n\n\nAutomated script ended successfully! Than you\n"
+else
+
+echo "Error on unziping. Please try again."
+echo
+
+exit 1;
+fi
+EOF
+
+exit 0
+#sshpass -p $password ssh  $userName@$target_host
+#ssh $userName@$target_host
+}
+
+
+
+init_hosts(){
+
+echo "Server initialized"
+echo
+    create_db_config 2>&1
+    copy_files 2>&1
+    server_access 2>&1
+}
+
+
+
+validate_file(){
+# check if file exists
+
+if [[ -f $sourceCode && -f $databaseSql ]]; then
+    init_hosts
+    else
+
+    echo "Files not found! Please Export it."
+    exit 0;
+fi
+
+
+}
+
+
+
+
+
+validate_file
+
+}
+
+
+
+printf "\n\nWelcome to kodCms migration tool. \tBy: Ronash Dhakal\n";
+read -p 'Enter Domain name without www: ' cmsDomain
+
+printf "\n${GREEN}What would you like to do?\n"
+PS3='Please enter your choice: '
+options=("Export Database" "Export Source Code" "Upload to server" "Quit")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Export Database")
+            export_db
+            ;;
+        "Export Source Code")
+		zip_sourcecode
+            ;;
+	"Upload to server")
+	server_script
+	;;
+        "Quit")
+            break
+            ;;
+        *) echo "invalid option $REPLY";;
+    esac
+done
+
+exit 0
+
+
+
+
+
+
+
+
+
+
+
+
+
