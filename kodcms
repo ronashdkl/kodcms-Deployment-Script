@@ -144,12 +144,9 @@ server_access(){
     echo
 #initDbScript=$(pwd)/database.sh
 #sshpass -p $password 
-ssh  $userName@$target_host "cd ${webroot}; dbUser=${dbUser}; dbPwd=${dbpwd}; dbName=${dbName}; bash" << EOF
+ssh  $userName@$target_host "cd ${webroot}; dbUser=${dbUser}; dbName=${dbName}; bash" << EOF
  #cd ../../web/;
-echo $dbUser;
-echo $dbPwd;
-echo $dbName;
-exit;
+
 #[[ -d ./cms ]] && rm -rf ./cms 2>&1
 #[[ -d ./plugins ]] && rm -rf ./plugins 2>&1
 #[[ -d ./website ]] && rm -rf ./website 2>&1
@@ -181,7 +178,23 @@ echo
 mkdir -m 777 ./website/runtime
 echo "runtime directory created"
 echo  
-printf "\n\n\nAutomated script ended successfully! Than you\n"
+echo "Importing Db"
+echo
+# echo $dbUser;
+# echo $dbName;
+
+if mysql -u $dbUser -p $dbName < ./db.sql; 2>&1 then
+echo "Db Imported:
+echo
+rm ./db.sql && echo "db.sql removed"
+echo
+printf "\n KodCMS installation has been completed successfully.\n For update use different commands from menu. \n"
+
+else
+
+echo "Problem importing db file.\n"
+
+fi
 
 else
 echo "Error on unziping. Please try again."
@@ -210,7 +223,7 @@ echo
 validate_file(){
 # check if file exists
 
-if [[ -f $sourceCode && -f $databaseSql ]]; then
+if [[ -f $sourceCode && -f $databaseSql ]] 2>&1; then
     init_hosts
     else
 
