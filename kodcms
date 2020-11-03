@@ -170,20 +170,11 @@ echo "Assets directory created"
 echo
 mkdir -m 777 ./website/runtime
 echo "runtime directory created"
-echo  
-echo "Importing Db"
-echo
-if ! mysql -u $dbUser -p $dbName < ./db.sql ; 2>&1 then
-echo "Problem importing db file.\n"
 else
-rm ./db.sql && echo "db.sql removed"
+echo "Unable to unzip source code!"
 echo
 fi
-printf "\n KodCMS installation has been completed successfully.\n For update use different commands from menu. \n"
-else
-echo "Error on unziping. Please try again."
-echo
-fi
+
 EOF
 }
 
