@@ -145,18 +145,11 @@ server_access(){
 #initDbScript=$(pwd)/database.sh
 #sshpass -p $password 
 ssh  $userName@$target_host "cd ${webroot}; dbUser=${dbUser}; dbName=${dbName}; bash" << EOF
- #cd ../../web/;
-
-#[[ -d ./cms ]] && rm -rf ./cms 2>&1
-#[[ -d ./plugins ]] && rm -rf ./plugins 2>&1
-#[[ -d ./website ]] && rm -rf ./website 2>&1
-
 if unzip -o ./kodcms.zip 2>&1;
 then
 rm ./kodcms.zip
 echo "Zip removed"
 echo
-
 chmod 0777 -vR ./website/runtime
 echo "Website runtime permission changed"
 echo
@@ -180,31 +173,18 @@ echo "runtime directory created"
 echo  
 echo "Importing Db"
 echo
-# echo $dbUser;
-# echo $dbName;
-
-if mysql -u $dbUser -p $dbName < ./db.sql; 2>&1 then
-echo "Db Imported:
-echo
+if ! mysql -u $dbUser -p $dbName < ./db.sql ; 2>&1 then
+echo "Problem importing db file.\n"
+else
 rm ./db.sql && echo "db.sql removed"
 echo
-printf "\n KodCMS installation has been completed successfully.\n For update use different commands from menu. \n"
-
-else
-
-echo "Problem importing db file.\n"
-
 fi
-
+printf "\n KodCMS installation has been completed successfully.\n For update use different commands from menu. \n"
 else
 echo "Error on unziping. Please try again."
 echo
-
 fi
 EOF
-
-#sshpass -p $password ssh  $userName@$target_host
-#ssh $userName@$target_host
 }
 
 
