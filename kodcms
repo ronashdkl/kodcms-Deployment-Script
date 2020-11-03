@@ -144,9 +144,12 @@ server_access(){
     echo
 #initDbScript=$(pwd)/database.sh
 #sshpass -p $password 
-ssh  $userName@$target_host "cd ${webroot}; bash" << EOF
+ssh  $userName@$target_host "cd ${webroot}; dbUser=${dbUser}; dbPwd=${dbpwd}; dbName=${dbName}; bash" << EOF
  #cd ../../web/;
-
+echo $dbUser;
+echo $dbPwd;
+echo $dbName;
+exit;
 #[[ -d ./cms ]] && rm -rf ./cms 2>&1
 #[[ -d ./plugins ]] && rm -rf ./plugins 2>&1
 #[[ -d ./website ]] && rm -rf ./website 2>&1
@@ -177,7 +180,7 @@ echo "Assets directory created"
 echo
 mkdir -m 777 ./website/runtime
 echo "runtime directory created"
-echo
+echo  
 printf "\n\n\nAutomated script ended successfully! Than you\n"
 
 else
